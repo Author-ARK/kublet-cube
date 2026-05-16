@@ -1,3 +1,3 @@
 summary: Digital clock rotating Asu / Frankfurt / Colombo every minute
 desc: Big HH:MM clock (Arial_72_Bold) for one city at a time. The display rotates between Asuncion, Frankfurt and Colombo on every minute-rollover (:00 second). The top bar shows the currently-displayed zone's local dd/mm/yyyy date; the city name above the clock is in that zone's color. DST handled by POSIX TZ strings.
-author: Author_ARK
+author: Author-ARK <schlaptop@protonmail.com>

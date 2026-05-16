@@ -12,7 +12,7 @@ descended from the open-source community fork by
 [@markusos](https://github.com/markusos/kublet-apps) and ship under the
 Apache 2.0 license. Apps and the fleet web-UI in this repository are new.
 
-> Copyright © A.R.K · [schlaptop@protonmail.com](mailto:schlaptop@protonmail.com)
+> Copyright © Author-ARK · [schlaptop@protonmail.com](mailto:schlaptop@protonmail.com)
 > Licensed under the Apache License, Version 2.0 — see [LICENSE](LICENSE)
 > and [NOTICE](NOTICE).
 
@@ -34,7 +34,7 @@ Claude or any other tool / idea) and OTA them onto your cubes.
 
 It's been fun. Maybe it helps you too.
 
-— A.R.K.
+— Author-ARK
 
 ---
 

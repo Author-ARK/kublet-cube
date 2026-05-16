@@ -706,45 +706,51 @@ void drawScreen() {
   int iconCY = 85;
   drawLargeIcon(55, iconCY, currentIcon, animPhase);
 
-  // --- Current temperature (right side, vertically centered with icon) ---
+  // Right-side stack: condition label on top, big temperature in the
+  // middle, today's min/max underneath. Three rows are anchored on
+  // textCX=170 and stacked at y=55 / y=70 / y=108 — that gives the
+  // larger temperature font enough headroom while keeping the
+  // condition label visible above and the min/max line clear below.
   int textCX = 170;
-  char numStr[8];
-  snprintf(numStr, sizeof(numStr), "%.0f", weather.currentTemp);
-  // Bumped from Arial_24_Bold to Arial_28_Bold (~17% larger) per request
-  // to make the current temperature visually dominant. 28 is the next
-  // bold size up; Arial doesn't have a tier between them.
-  ui.tft.setTTFFont(Arial_28_Bold);
-  ui.tft.setTextColor(TFT_WHITE, CLR_BG);
-  int numW = ui.tft.TTFtextWidth(numStr);
-  int fW = ui.tft.TTFtextWidth("F");
-  int totalW = numW + 10 + fW; // num + degree circle gap + F
-  int tx = textCX - totalW / 2;
-  int tempY = iconCY - 20; // temp above center
-  ui.tft.setCursor(tx, tempY);
-  ui.tft.print(numStr);
-  // Draw degree symbol as small circle
-  ui.tft.drawCircle(tx + numW + 4, tempY + 3, 3, TFT_WHITE);
-  ui.tft.setCursor(tx + numW + 10, tempY);
-  ui.tft.print("C");
 
-  // --- Current condition label ---
+  // --- Condition label (sits 2 px above the temperature) ---
+  // Arial_12 ~ 12 px tall; with the temp glyph top at y=64, the label
+  // ending at y=62 leaves the requested 2 px gap.
   const char* label = wmoToLabel(weather.currentCode);
   ui.tft.setTTFFont(Arial_12);
   ui.tft.setTextColor(ui.tft.color565(160, 160, 180), CLR_BG);
   int lw = ui.tft.TTFtextWidth(label);
-  ui.tft.setCursor(textCX - lw / 2, iconCY + 10); // label below center
+  ui.tft.setCursor(textCX - lw / 2, 50);
   ui.tft.print(label);
 
-  // --- Today's min / max ---
-  // Drawn just under the condition label so you can see the day's range at
-  // a glance without waiting for the 3-day strip below the divider.
+  // --- Current temperature ---
+  // Bumped Arial_40_Bold → Arial_48_Bold (next tier; bold ladder skips
+  // 44). Glyph spans y=64..112; min/max line moves to y=120 to keep
+  // an 8 px gap below the now-taller digits.
+  char numStr[8];
+  snprintf(numStr, sizeof(numStr), "%.0f", weather.currentTemp);
+  ui.tft.setTTFFont(Arial_48_Bold);
+  ui.tft.setTextColor(TFT_WHITE, CLR_BG);
+  int numW = ui.tft.TTFtextWidth(numStr);
+  int fW = ui.tft.TTFtextWidth("C");
+  int totalW = numW + 16 + fW; // num + degree circle gap + C
+  int tx = textCX - totalW / 2;
+  int tempY = 64;              // 2 px below the condition label
+  ui.tft.setCursor(tx, tempY);
+  ui.tft.print(numStr);
+  // Degree symbol — scaled again to match the larger digits.
+  ui.tft.drawCircle(tx + numW + 7, tempY + 6, 6, TFT_WHITE);
+  ui.tft.setCursor(tx + numW + 16, tempY);
+  ui.tft.print("C");
+
+  // --- Today's min / max (below the temperature) ---
   char mmStr[20];
   snprintf(mmStr, sizeof(mmStr), "%.0f° / %.0f° C",
            weather.dailyMin[0], weather.dailyMax[0]);
   ui.tft.setTTFFont(Arial_12);
   ui.tft.setTextColor(ui.tft.color565(140, 200, 220), CLR_BG);
   int mmW = ui.tft.TTFtextWidth(mmStr);
-  ui.tft.setCursor(textCX - mmW / 2, iconCY + 26);
+  ui.tft.setCursor(textCX - mmW / 2, 122);
   ui.tft.print(mmStr);
 
   // --- Divider line ---

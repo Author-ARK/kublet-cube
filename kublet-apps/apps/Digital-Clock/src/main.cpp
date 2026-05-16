@@ -131,9 +131,12 @@ void drawAll(time_t utc) {
   }
   int tw = ui.tft.TTFtextWidth(timeStr);
   int tx = (tw < 240) ? (240 - tw) / 2 : 0;
-  // cursor.y=96 → glyph spans y≈96..156, geometric center at y=126 which
-  // is just below the screen midline so the city label above breathes.
-  ui.tft.setCursor(tx, 96);
+  // ASU (home) screen sits its clock just 3 px above the bottom-tab
+  // divider line at y=208 — cursor.y=145 → glyph y=145..205 → 3 px gap
+  // to the divider. FRA/COL screens keep the clock high so the home
+  // time below fits underneath.
+  int clockY = (currentZone == 0) ? 145 : 96;
+  ui.tft.setCursor(tx, clockY);
   ui.tft.print(timeStr);
 
   // ── Footer band ────────────────────────────────────────────────────
@@ -157,10 +160,16 @@ void drawAll(time_t utc) {
     ui.tft.fillCircle(228, 226, 4, dotColor);
   } else {
     // FRA / COL screen → maximum-size Asuncion home time.
-    // Drop the "ASU" prefix and render just HH:MM at Arial_60_Bold —
-    // matches the main clock's size and makes the home time impossible
-    // to miss. The amber color (ZONES[0].color) plus the foreign-city
-    // label up top is enough context that this is the Asunción time.
+    // Two clocks on the same screen — separate them with a 3-px-thick
+    // divider in ~30 %-white grey (RGB565 0x4A69 ≈ rgb(77,77,77)) so it
+    // reads cleanly from across the room while still feeling subordinate
+    // to the bright clock digits above and below.
+    ui.tft.fillRect(20, 173, 200, 3, 0x4A69);
+
+    // ASU home time. Arial_48_Bold sits one font tier below the main
+    // 60_Bold clock — visually subordinated (~20% smaller; user asked
+    // for ~10%, but the bold-font ladder only stops at 48 / 60 / 72).
+    // cursor.y=192 anchors the glyph's bottom edge at y≈240 (screen edge).
     char asuStr[8];
     if (ntpSynced) {
       setenv("TZ", "<-03>3", 1);
@@ -172,13 +181,11 @@ void drawAll(time_t utc) {
     } else {
       strcpy(asuStr, "--:--");
     }
-    // cursor.y=180 anchors the glyph's bottom edge at y≈240 (screen edge).
-    // No divider — the giant amber clock owns the bottom band.
-    ui.tft.setTTFFont(Arial_60_Bold);
+    ui.tft.setTTFFont(Arial_48_Bold);
     ui.tft.setTextColor(ZONES[0].color, TFT_BLACK);  // ASU amber
     int aw = ui.tft.TTFtextWidth(asuStr);
     int ax = (aw < 240) ? (240 - aw) / 2 : 0;
-    ui.tft.setCursor(ax, 180);
+    ui.tft.setCursor(ax, 192);
     ui.tft.print(asuStr);
   }
 }

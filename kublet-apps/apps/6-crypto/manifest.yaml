@@ -1,3 +1,3 @@
 summary: 6 cryptos — BTC, ETH, XRP, SOL, XLM, HBAR
 desc: Six-row crypto board. Each row shows the 1-min tick arrow (▲/▼/flat), ticker (in its brand color), live price (EU format, color-tinted on last-minute direction), and 1h percent change (green/red). One Binance windowSize=1h ticker call per minute fetches all six (~2.4 KB).
-author: Author_ARK
+author: Author-ARK <schlaptop@protonmail.com>
