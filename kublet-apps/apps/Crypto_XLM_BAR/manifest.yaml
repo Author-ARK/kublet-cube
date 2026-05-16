@@ -1,3 +1,3 @@
 summary: XLM + BAR live prices (USD)
 desc: Stellar (XLM) and BAR split-screen, refreshed every full minute from Binance per-symbol ticker (XLMUSDT + BARUSDT). Same compact layout as the BTC/ETH and XRP/SOL apps. Note — verify the BARUSDT pair exists on Binance for your region; if not, swap to a working symbol in src/main.cpp.
-author: schlaptop
+author: Author_ARK

@@ -1,3 +1,3 @@
 summary: Dex Tokens — arbitrary token prices via Dexscreener
 desc: Displays USD price for two configured tokens (chain + address) from the Dexscreener public API (`/tokens/v1/{chain}/{address}`, ~1.2 KB per call, no auth, 300 RPM limit). Refreshes every full minute. To change which tokens are shown, edit the `TOKENS[]` array in src/main.cpp and redeploy.
-author: schlaptop
+author: Author_ARK

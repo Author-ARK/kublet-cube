@@ -1,3 +1,3 @@
 summary: Silver solo — price + 1h chart (samples-as-you-go)
 desc: Single-metal Ag display. Big Arial_48 price (always 2 decimals), 1h % change next to the ticker, and a delta-from-baseline chart that fills minute-by-minute as the cube polls Stooq (no klines endpoint exists for spot metals — the cube collects up to 60 samples in RAM). Empty for the first minute after deploy; full after ~60.
-author: schlaptop
+author: Author_ARK
