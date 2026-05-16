@@ -1,0 +1,12 @@
+[
+  { "url": "*chart/VOO*", "file": "VOO.json", "status": 200 },
+  { "url": "*chart/VGT*", "file": "VGT.json", "status": 200 },
+  { "url": "*chart/VTI*", "file": "VTI.json", "status": 200 },
+  { "url": "*chart/VXUS*", "file": "VXUS.json", "status": 200 },
+  { "url": "*chart/AAPL*", "file": "AAPL.json", "status": 200 },
+  { "url": "*chart/NVDA*", "file": "NVDA.json", "status": 200 },
+  { "url": "*chart/GOOG*", "file": "GOOG.json", "status": 200 },
+  { "url": "*chart/AMZN*", "file": "AMZN.json", "status": 200 },
+  { "url": "*chart/%5EVIX*", "file": "VIX.json", "status": 200 },
+  { "url": "*chart/BTC-USD*", "file": "BTC-USD.json", "status": 200 }
+]

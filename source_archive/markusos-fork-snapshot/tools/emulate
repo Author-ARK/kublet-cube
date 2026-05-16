@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+EMU_DIR="$SCRIPT_DIR/src/emulate"
+BUILD_DIR="$EMU_DIR/build"
+
+usage() {
+  echo "Usage: ./tools/emulate <app> [options]"
+  echo ""
+  echo "Options:"
+  echo "  --scale N              Window scale factor (default: 2)"
+  echo "  --screenshot PATH      Capture screenshot and exit"
+  echo "  --after SECONDS        Time before screenshot (default: 2)"
+  echo "  --gif PATH             Capture animated GIF and exit"
+  echo "  --gif-start SECONDS    Wall time before capturing starts (default: 1)"
+  echo "  --gif-duration SECONDS Wall time to capture (default: 4)"
+  echo "  --gif-fps N            Capture and playback framerate (default: 10)"
+  echo "  --button-at SPEC       Scripted button presses: seconds[:duration_ms],..."
+  echo "                         e.g. '1.5' '1.5:200' '1,3:200,5'"
+  echo "  --generate-reference   Save reference screenshot to app assets for regression tests"
+  echo ""
+  echo "Keys (while running):"
+  echo "  Space    Button (GPIO 19)"
+  echo "  S        Save screenshot.png"
+  echo "  Q        Quit"
+  exit 1
+}
+
+# Check prerequisites
+check_prereqs() {
+  local missing=0
+  if ! command -v cmake &>/dev/null; then
+    echo "Error: cmake not found. Install with: brew install cmake"
+    missing=1
+  fi
+  if ! brew --prefix sdl2 &>/dev/null 2>&1; then
+    echo "Error: SDL2 not found. Install with: brew install sdl2"
+    missing=1
+  fi
+  if [ $missing -ne 0 ]; then exit 1; fi
+}
+
+# Parse app name (first non-flag argument)
+APP_NAME=""
+GIF_PATH=""
+GIF_DURATION=4
+GIF_START=1
+GIF_FPS=10
+GENERATE_REF=0
+EXTRA_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --gif)
+      GIF_PATH="$2"; shift 2 ;;
+    --gif-duration)
+      GIF_DURATION="$2"; shift 2 ;;
+    --gif-start)
+      GIF_START="$2"; shift 2 ;;
+    --gif-fps)
+      GIF_FPS="$2"; shift 2 ;;
+    --generate-reference)
+      GENERATE_REF=1; shift ;;
+    --scale|--screenshot|--after|--button-at)
+      EXTRA_ARGS+=("$1" "$2"); shift 2 ;;
+    --help|-h)
+      usage ;;
+    -*)
+      EXTRA_ARGS+=("$1"); shift ;;
+    *)
+      if [ -z "$APP_NAME" ]; then
+        APP_NAME="$1"
+      else
+        EXTRA_ARGS+=("$1")
+      fi
+      shift ;;
+  esac
+done
+
+if [ -z "$APP_NAME" ]; then
+  echo "Error: no app specified"
+  echo ""
+  usage
+fi
+
+APP_DIR="$REPO_ROOT/apps/$APP_NAME"
+if [ ! -f "$APP_DIR/src/main.cpp" ]; then
+  echo "Error: app '$APP_NAME' not found at $APP_DIR/"
+  echo ""
+  echo "Available apps:"
+  for d in "$REPO_ROOT"/apps/*/; do
+    [ -f "$d/src/main.cpp" ] && echo "  $(basename "$d")"
+  done
+  exit 1
+fi
+
+check_prereqs
+
+# Configure cmake (reconfigure if APP_DIR changed)
+NEEDS_CONFIG=0
+if [ ! -f "$BUILD_DIR/CMakeCache.txt" ]; then
+  NEEDS_CONFIG=1
+else
+  CACHED_APP=$(grep "APP_DIR:PATH=" "$BUILD_DIR/CMakeCache.txt" 2>/dev/null | cut -d= -f2-)
+  if [ "$CACHED_APP" != "$APP_DIR" ]; then
+    rm -rf "$BUILD_DIR"
+    NEEDS_CONFIG=1
+  fi
+fi
+
+if [ $NEEDS_CONFIG -eq 1 ]; then
+  echo "Configuring for $APP_NAME..."
+  cmake -S "$EMU_DIR" -B "$BUILD_DIR" -DAPP_DIR="$APP_DIR" -DCMAKE_BUILD_TYPE=Debug 2>&1
+fi
+
+# Build
+echo "Building $APP_NAME..."
+cmake --build "$BUILD_DIR" 2>&1
+echo ""
+
+# Generate reference screenshot
+if [ $GENERATE_REF -eq 1 ]; then
+  REF_PATH="$APP_DIR/assets/reference.png"
+  mkdir -p "$APP_DIR/assets"
+  echo "Generating reference screenshot for $APP_NAME..."
+  "$BUILD_DIR/emulate" --screenshot "$REF_PATH" --after 3 \
+    "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+  if [ -f "$REF_PATH" ]; then
+    SIZE=$(wc -c < "$REF_PATH" | tr -d ' ')
+    echo "Reference saved: $REF_PATH ($SIZE bytes)"
+  else
+    echo "Error: screenshot was not produced"
+    exit 1
+  fi
+  exit 0
+fi
+
+# Run
+if [ -n "$GIF_PATH" ]; then
+  # GIF capture mode
+  FFMPEG="/opt/homebrew/bin/ffmpeg"
+  if ! [ -x "$FFMPEG" ]; then
+    echo "Error: ffmpeg not found at $FFMPEG. Install with: brew install ffmpeg"
+    exit 1
+  fi
+
+  FRAME_DIR=$(mktemp -d)
+  trap "rm -rf '$FRAME_DIR'" EXIT
+
+  # Derive frame interval from fps
+  GIF_INTERVAL=$((1000 / GIF_FPS))
+
+  echo "Capturing GIF (start ${GIF_START}s, duration ${GIF_DURATION}s, ${GIF_FPS}fps)..."
+  "$BUILD_DIR/emulate" \
+    --gif "$GIF_PATH" \
+    --gif-frame-dir "$FRAME_DIR" \
+    --gif-duration "$GIF_DURATION" \
+    --gif-start "$GIF_START" \
+    --gif-interval "$GIF_INTERVAL" \
+    "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+
+  # Count captured frames
+  FRAME_COUNT=$(ls "$FRAME_DIR"/frame_*.png 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$FRAME_COUNT" -eq 0 ]; then
+    echo "Error: no frames captured"
+    exit 1
+  fi
+  echo "Assembling $FRAME_COUNT frames into GIF at ${GIF_FPS}fps..."
+
+  "$FFMPEG" -y -framerate "$GIF_FPS" \
+    -i "$FRAME_DIR/frame_%05d.png" \
+    -vf "split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3" \
+    -loop 0 \
+    "$GIF_PATH" 2>/dev/null
+
+  GIF_SIZE=$(ls -lh "$GIF_PATH" | awk '{print $5}')
+  echo "GIF saved: $GIF_PATH ($GIF_SIZE)"
+else
+  exec "$BUILD_DIR/emulate" "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+fi

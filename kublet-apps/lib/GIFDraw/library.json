@@ -1,0 +1,7 @@
+{
+  "name": "GIFDraw",
+  "version": "1.0.0",
+  "description": "AnimatedGIF TFT_eSPI rendering callback",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

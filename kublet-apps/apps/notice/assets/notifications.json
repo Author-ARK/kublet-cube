@@ -1,0 +1,56 @@
+[
+  {
+    "time": 1.0,
+    "source": "imessage",
+    "sender": "+1 (555) 123-4567",
+    "text": "Hey, are you coming to dinner tonight? We're heading out at 7."
+  },
+  {
+    "time": 4.0,
+    "source": "slack",
+    "sender": "Alice (#general)",
+    "text": "The deploy just went out to staging and production. Can someone check the staging environment and make sure everything looks good? Also the new onboarding flow needs testing before we can sign off on the release."
+  },
+  {
+    "time": 7.0,
+    "source": "discord",
+    "sender": "GameBot (#lobby)",
+    "text": "Match starting in 5 minutes! Join the voice channel."
+  },
+  {
+    "time": 10.0,
+    "source": "email",
+    "sender": "HR Team",
+    "text": "Your PTO request for April 3-7 has been approved."
+  },
+  {
+    "time": 13.0,
+    "source": "calendar",
+    "sender": "Team Standup",
+    "text": "Starts in 10 minutes — Conference Room B"
+  },
+  {
+    "time": 16.0,
+    "source": "wallet",
+    "sender": "Apple Card",
+    "text": "$41.32 at Whole Foods Market"
+  },
+  {
+    "time": 19.0,
+    "source": "facetime",
+    "sender": "Mom",
+    "text": "Incoming FaceTime call"
+  },
+  {
+    "time": 22.0,
+    "source": "chrome",
+    "sender": "facebook.com",
+    "text": "Happy birthday to Fabian!"
+  },
+  {
+    "time": 25.0,
+    "source": "notes",
+    "sender": "Shared Note",
+    "text": "Lisa edited 'Grocery List'"
+  }
+]

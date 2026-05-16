@@ -1,0 +1,12 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pyserial", "esptool>=4.8.1", "esp-idf-nvs-partition-gen>=0.2.0"]
+# ///
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+from kublet_dev.cli import main
+
+main()

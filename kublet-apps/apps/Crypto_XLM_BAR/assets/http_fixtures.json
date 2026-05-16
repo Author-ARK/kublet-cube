@@ -1,0 +1,4 @@
+[
+  { "url": "*api.binance.com*symbol=XLMUSDT*", "file": "xlm.json", "status": 200 },
+  { "url": "*api.binance.com*symbol=BARUSDT*", "file": "bar.json", "status": 200 }
+]

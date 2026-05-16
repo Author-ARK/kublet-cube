@@ -1,0 +1,4 @@
+krates/*/.pio
+krates/*/.vscode
+krates/*/.vs
+krates/*/.gitignore

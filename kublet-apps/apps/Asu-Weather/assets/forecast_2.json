@@ -1,0 +1,49 @@
+{
+    "latitude": 59.3289,
+    "longitude": 18.072357,
+    "generationtime_ms": 3.9566755294799805,
+    "utc_offset_seconds": 3600,
+    "timezone": "Europe/Stockholm",
+    "timezone_abbreviation": "GMT+1",
+    "elevation": 18.0,
+    "current_units": {
+        "time": "iso8601",
+        "interval": "seconds",
+        "temperature_2m": "\u00b0F",
+        "weather_code": "wmo code"
+    },
+    "current": {
+        "time": "2026-03-24T02:45",
+        "interval": 900,
+        "temperature_2m": 38.5,
+        "weather_code": 3
+    },
+    "daily_units": {
+        "time": "iso8601",
+        "temperature_2m_max": "\u00b0F",
+        "temperature_2m_min": "\u00b0F",
+        "weather_code": "wmo code"
+    },
+    "daily": {
+        "time": [
+            "2026-03-24",
+            "2026-03-25",
+            "2026-03-26"
+        ],
+        "temperature_2m_max": [
+            45.2,
+            45.5,
+            43.2
+        ],
+        "temperature_2m_min": [
+            38.0,
+            40.7,
+            36.7
+        ],
+        "weather_code": [
+            53,
+            53,
+            51
+        ]
+    }
+}

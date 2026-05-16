@@ -1,0 +1,3 @@
+summary: Asuncion weather (Open-Meteo)
+desc: Single-location weather for Asuncion, Paraguay — current conditions + short-term forecast from Open-Meteo (no API key). Cloned from the upstream multi-city weather app, narrowed to one location.
+author: schlaptop (after Markus' weather app)

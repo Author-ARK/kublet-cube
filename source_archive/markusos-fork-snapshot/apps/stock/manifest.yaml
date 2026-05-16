@@ -1,0 +1,7 @@
+summary: S&P 500 intraday chart
+desc: Displays VOO intraday price chart with gain/loss indicator
+author: Markus
+configs:
+  - id: server_url
+    name: Server URL
+    type: text

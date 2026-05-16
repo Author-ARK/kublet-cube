@@ -1,0 +1,5 @@
+[
+  { "url": "*apod.nasa.gov/apod/ap*.html", "file": "apod_page.html", "status": 200 },
+  { "url": "*wsrv.nl*", "file": "apod_image.jpg", "status": 200 },
+  { "url": "*apod.nasa.gov/apod/image*", "file": "apod_image.jpg", "status": 200 }
+]

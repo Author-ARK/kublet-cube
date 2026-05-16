@@ -1,0 +1,4 @@
+[
+  { "url": "*api.binance.com*symbol=BTCUSDT*", "file": "btc.json", "status": 200 },
+  { "url": "*api.binance.com*symbol=ETHUSDT*", "file": "eth.json", "status": 200 }
+]

@@ -1,0 +1,17 @@
+apps/*/.pio
+apps/*/.vscode
+apps/*/.vs
+apps/*/.gitignore
+
+.DS_Store
+.venv/
+
+# Tools
+__pycache__/
+tools/.env
+tools/.devices.yml
+
+tools/nvs_wifi.bin
+tools/nvs_wifi.csv
+
+tools/src/emulate/build/

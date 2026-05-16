@@ -1,0 +1,7 @@
+{
+  "name": "KGFX",
+  "version": "0.1.0",
+  "description": "Kublet graphics helpers for TFT_eSPI",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

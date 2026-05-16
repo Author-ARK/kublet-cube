@@ -1,0 +1,3 @@
+[
+  { "url": "*api.binance.com*klines*symbol=ETHUSDT*", "file": "klines_eth.json", "status": 200 }
+]

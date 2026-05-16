@@ -1,0 +1,4 @@
+[
+  { "url": "*topstories.json", "file": "topstories.json", "status": 200 },
+  { "url": "*/item/*.json", "file": "item_1.json", "status": 200 }
+]

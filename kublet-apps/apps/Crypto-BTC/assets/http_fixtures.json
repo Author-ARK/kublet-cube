@@ -1,0 +1,3 @@
+[
+  { "url": "*api.binance.com*klines*symbol=BTCUSDT*", "file": "klines_btc.json", "status": 200 }
+]

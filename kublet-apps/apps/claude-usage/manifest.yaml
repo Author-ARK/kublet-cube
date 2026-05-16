@@ -1,0 +1,7 @@
+summary: Claude Code usage monitor
+desc: Displays Claude Code session and weekly usage as circular gauges
+author: Markus
+configs:
+  - id: server_url
+    name: Usage Server URL
+    type: text

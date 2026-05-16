@@ -1,0 +1,3 @@
+[
+  { "url": "*api.binance.com*ticker*windowSize=1h*", "file": "ticker6.json", "status": 200 }
+]

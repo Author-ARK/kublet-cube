@@ -1,0 +1,18 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "currency": "USD",
+          "symbol": "SI=F",
+          "exchangeName": "CMX",
+          "instrumentType": "FUTURE",
+          "regularMarketPrice": 33.495,
+          "chartPreviousClose": 33.21,
+          "priceHint": 3
+        }
+      }
+    ],
+    "error": null
+  }
+}

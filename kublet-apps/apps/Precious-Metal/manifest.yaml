@@ -1,0 +1,3 @@
+summary: Precious metals — silver + gold (USD/oz)
+desc: Ag and Au split-screen, refreshed every full minute from Stooq CSV (XAGUSD + XAUUSD). Silver price in silver, gold price in gold; right-shifted past the metal label. Auto-dims by Asuncion local time. Green dot when both Stooq calls succeed.
+author: schlaptop

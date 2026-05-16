@@ -1,0 +1,3 @@
+summary: BTC + ETH live prices (USD)
+desc: Bitcoin and Ethereum split-screen, refreshed every 2 minutes from Binance per-symbol ticker (BTCUSDT + ETHUSDT, ~50 bytes each). Green dot when both calls succeed.
+author: schlaptop

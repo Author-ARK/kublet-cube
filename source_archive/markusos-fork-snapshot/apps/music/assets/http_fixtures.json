@@ -1,0 +1,4 @@
+[
+  { "url": "*/api/music/artwork", "file": "artwork.jpg", "status": 200 },
+  { "url": "*/api/music", "file": "metadata.json", "status": 200 }
+]

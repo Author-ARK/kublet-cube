@@ -1,0 +1,4 @@
+[
+  { "url": "*stooq.com*s=xagusd*", "file": "silver.csv", "status": 200 },
+  { "url": "*stooq.com*s=xauusd*", "file": "gold.csv",   "status": 200 }
+]

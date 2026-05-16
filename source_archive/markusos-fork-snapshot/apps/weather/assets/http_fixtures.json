@@ -1,0 +1,3 @@
+[
+  { "url": "*api.open-meteo.com*", "file": "forecast_1.json", "status": 200 }
+]

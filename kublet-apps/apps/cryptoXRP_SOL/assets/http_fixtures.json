@@ -1,0 +1,4 @@
+[
+  { "url": "*api.binance.com*symbol=XRPUSDT*", "file": "xrp.json", "status": 200 },
+  { "url": "*api.binance.com*symbol=SOLUSDT*", "file": "sol.json", "status": 200 }
+]
