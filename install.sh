@@ -1,21 +1,33 @@
 #!/usr/bin/env bash
-# Kublet Silver — one-shot bootstrap for macOS.
+# Kublet-Cube — one-shot bootstrap for macOS.
 #
-# Sets up everything you need to flash a Kublet cube with the silver-price
-# app: clones the community fork, creates a Python venv, installs PlatformIO
-# + ESP-IDF tooling, patches the desktop emulator's SDL2 hookup, and runs a
-# smoke build to download and cache the ESP32 toolchain.
+# Sets up everything you need to manage a fleet of Kublet cubes:
+#   - installs Homebrew dependencies (cmake, sdl2, ffmpeg)
+#   - clones the community kublet-apps fork (or reuses an existing checkout)
+#   - creates a Python venv at kublet-apps/kublet_env/
+#   - installs PlatformIO + esptool + Flask into the venv
+#   - patches the desktop SDL2 emulator's CMake hookup
+#   - runs a smoke build so the ESP32 toolchain is cached
 #
 # Usage:
-#   ./install.sh                # install in current directory (creates ./kublet-silver/)
-#   ./install.sh ~/projects     # install at ~/projects/kublet-silver/
+#   ./install.sh                # install in current directory
+#   ./install.sh ~/projects     # install at ~/projects/kublet-cube/
+#
+# After bootstrap:
+#   ./kublet.sh start           # boot the fleet webui at http://localhost:1666
+#   ./kublet.sh status | stop | restart | logs
 #
 # Expected bundle layout (sibling to install.sh):
 #   install.sh
-#   HOWTO.md
-#   HANDOVER.md            ← cold-start resume document for future you / agents
-#   apps/silver/           ← the silver-price app source (copied into kublet-apps/apps/)
-#   webui/                 ← the fleet web UI (used as-is, parallel to kublet-apps/)
+#   kublet.sh              ← webui lifecycle wrapper
+#   README.md              ← landing page
+#   HOWTO.md               ← first-time install + first-cube flash walkthrough
+#   DEVELOPING.md          ← server, emulator, deploy, adding apps, troubleshooting
+#   CONTRIBUTING.md        ← issue / PR conventions
+#   LICENSE                ← Apache License 2.0
+#   NOTICE                 ← upstream attributions
+#   apps/                  ← (optional) app sources to copy into kublet-apps/apps/
+#   webui/                 ← Flask fleet manager (used as-is, parallel to kublet-apps/)
 #   patches/kublet-apps/   ← drop-in replacements for files in the cloned upstream:
 #                            tools/src/emulate/CMakeLists.txt  (SDL2 fix)
 #                            tools/src/kublet_dev/flash.py     (non-interactive init)
@@ -26,7 +38,7 @@ set -euo pipefail
 
 BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="${1:-$PWD}"
-KUBLET_DIR="$TARGET_DIR/kublet-silver"
+KUBLET_DIR="$TARGET_DIR/kublet-cube"
 APPS_REPO_URL="https://github.com/markusos/kublet-apps.git"
 
 # ---------- pretty printing ----------
@@ -36,7 +48,7 @@ ok()    { printf "  \033[32m✓\033[0m %s\n" "$*"; }
 warn()  { printf "  \033[33m⚠\033[0m %s\n" "$*"; }
 die()   { printf "  \033[31m✗\033[0m %s\n" "$*" >&2; exit 1; }
 
-bold "Kublet Silver bootstrap"
+bold "Kublet-Cube bootstrap"
 echo "  Target: $KUBLET_DIR"
 echo
 
@@ -216,18 +228,23 @@ echo
 bold "All done."
 cat <<EOF
 
-Next steps (see HOWTO.md for the long version):
+Next steps (see HOWTO.md + DEVELOPING.md for the long version):
 
-  1. Plug your kublet into a data-capable USB Mini-B cable (the trapezoid connector on the cube). Install the SiLabs CP210x driver if you haven't.
-  2. cd $KUBLET_DIR/kublet-apps
-     source kublet_env/bin/activate
-     python tools/dev init --name kublet1
-     # enter your WiFi SSID + password when prompted
-  3. python tools/dev deploy silver kublet1
-     # → cube reboots into the silver app
-  4. (optional) Start the fleet webui:
-     cd $KUBLET_DIR/webui && python app.py
-     # browse http://localhost:1666
+  1. Plug your kublet into a data-capable USB Mini-B cable (the
+     trapezoid connector on the cube). Install the SiLabs CP210x
+     driver if you haven't.
+  2. Boot the fleet webui:
+       ./kublet.sh start
+       # browse http://localhost:1666
+  3. In the ⚡ Flash me tab — enter your WiFi SSID + password,
+     pick the cube's serial port, click Flash.
+  4. Once the cube comes back online it appears in 📡 Devices.
+     Pick any app from the 📱 Apps catalog and 🚀 Deploy.
+
+CLI alternative if you'd rather skip the webui:
+  cd $KUBLET_DIR/kublet-apps && source kublet_env/bin/activate
+  python tools/dev init --name kublet1
+  python tools/dev deploy Crypto-BTC kublet1
 
 Have fun.
 EOF
