@@ -41,11 +41,19 @@ kublet-apps/tools/src/emulate/build/
 .vscode/
 .idea/
 *.swp
+# VS Code workspace file — often carries machine-local paths or per-user
+# folder preferences, so keep it out of the shared repo.
+kublet-workspace.code-workspace
+*.code-workspace
 
 # ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# ── Internal / scratch docs (not for public release) ─────────────────────────
+HANDOFF.md
+HANDOVER.md
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.bak
