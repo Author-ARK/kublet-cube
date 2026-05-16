@@ -1,0 +1,94 @@
+Kublet-Asu — fleet manager and apps for the Kublet cube
+Copyright © A.R.K · schlaptop@protonmail.com
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+
+This project incorporates and builds upon code, tooling, and data from
+the projects listed below. Their licenses are preserved in their
+respective source archives (see source_archive/ where applicable).
+
+
+─── Firmware / device tooling ────────────────────────────────────────
+
+  kublet-apps  (the dev-firmware, OTA listener, app templates,
+                 SDL2 emulator, and `tools/dev` CLI)
+    Author     : Markus Östberg
+    Repository : https://github.com/markusos/kublet-apps
+    License    : Apache License, Version 2.0
+    Used in    : kublet-apps/ (subtree)
+
+  Kublet hardware platform
+    Vendor     : The Kublet Company
+    Site       : https://thekublet.com  (offline since Aug 2024)
+    Archived   : source_archive/kublet-official/
+                 source_archive/wayback-developers-portal/
+
+  ESP32 Arduino core + PlatformIO toolchain
+    Repos      : https://github.com/espressif/arduino-esp32
+                 https://platformio.org
+    License    : LGPL-2.1 (esp32 core), Apache 2.0 (PlatformIO)
+
+  TFT_eSPI  (display driver for ST7789)
+    Author     : Bodmer
+    Repository : https://github.com/Bodmer/TFT_eSPI
+    License    : FreeBSD/BSD-2-clause
+
+  ArduinoJson
+    Author     : Benoît Blanchon
+    Repository : https://github.com/bblanchon/ArduinoJson
+    License    : MIT
+
+  KGFX, OTAServer  (companion libraries from the Kublet community)
+    Repository : https://github.com/markusos/kublet-apps  (lib/ subtree)
+    License    : Apache 2.0
+
+  stb_image_write.h, stb_image.h
+    Author     : Sean Barrett
+    Repository : https://github.com/nothings/stb
+    License    : Public Domain / MIT (dual)
+    Used in    : kublet-apps/tools/src/emulate/ (SDL2 emulator)
+
+
+─── External data APIs (queried at runtime, no source incorporated) ──
+
+  Open-Meteo                 — current & 3-day weather, sunrise/sunset
+                                https://open-meteo.com
+                                Free non-commercial; CC-BY 4.0 attribution.
+                                Used by: apps/Asu-Weather/
+
+  api.met.no (MET Norway)    — moonrise / moonset times
+                                https://api.met.no
+                                Free with a descriptive User-Agent;
+                                data under NLOD 2.0 / CC-BY 4.0.
+                                Used by: apps/Asu-Weather/
+
+  Binance Public API         — spot price + 1-hour windowed ticker
+                                https://www.binance.com/binance-api
+                                Used by: apps/Crypto-{BTC,ETH,XRP,SOL}/,
+                                          apps/cryptoBTC_ETH/,
+                                          apps/cryptoXRP_SOL/,
+                                          apps/Crypto_XLM_BAR/,
+                                          apps/6-crypto/
+
+  Stooq                      — silver / gold spot CSV
+                                https://stooq.com
+                                Used by: apps/Metal-{Au,Ag}/,
+                                          apps/Precious-Metal/
+
+  Dexscreener Public API     — DEX token prices on EVM/Solana/XRPL
+                                https://docs.dexscreener.com/api/reference
+                                Used by: apps/Dex-Tokens/
+
+  NTP                        — pool.ntp.org, time.nist.gov
+                                Used by: every app for wall-clock sync
+
+
+─── Acknowledgements ─────────────────────────────────────────────────
+
+Particular thanks to Markus Östberg and the Kublet community for
+keeping the device usable after the original vendor went dark. None
+of this works without their dev firmware and OTA listener.
+
+If you discover code in this repository that descends from a source
+not listed above, please open an issue and we'll add the attribution.

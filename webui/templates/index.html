@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Kublet Fleet</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>Kublet Fleet</h1>
+  <p class="subtitle">Build & OTA-deploy apps to your kublets · port 1666</p>
+  <nav id="tabs">
+    <a data-tab="flash">⚡ Flash me</a>
+    <a data-tab="devices">📡 Devices</a>
+    <a data-tab="deploy">🚀 Deploy</a>
+    <a data-tab="simulator">🖥 Simulator</a>
+    <a data-tab="catalog">📱 Apps catalog</a>
+    <a data-tab="about">ℹ About</a>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============================ FLASH ME ============================ -->
+  <div class="tab" id="tab-flash">
+  <section class="panel" id="flash">
+    <h2>⚡ Flash me — first-time setup over USB</h2>
+    <p class="muted">
+      Use this <strong>once per cube</strong>, the very first time you connect it.
+      Plugs the cube into your Mac, writes your WiFi credentials into the cube's
+      flash, and installs the OTA listener so future updates can go wirelessly.
+      After this, you'll never need the USB cable for that cube again unless
+      something goes badly wrong.
+    </p>
+
+    <details>
+      <summary>What gets flashed and why?</summary>
+      <div class="explainer">
+        <p>
+          The Kublet runs <strong>bare-metal ESP32 firmware — there is no Linux,
+          no shell, no SSH</strong>. What's "running" on it is whatever firmware
+          was last loaded:
+        </p>
+        <ul>
+          <li><strong>Out of the box ("open mobile app" screen):</strong>
+              Kublet's original closed firmware. It waits for the dead iOS app
+              to pair via BLE. It does NOT accept OTA pushes from us, so we
+              have to replace it.</li>
+          <li><strong>After this Flash Me step:</strong> the
+              <em>dev firmware</em> from the markusos community fork. It joins
+              your WiFi using the credentials you enter below, and listens on
+              port 80 of its LAN IP for app uploads.</li>
+          <li><strong>After your first app deploy (e.g. silver):</strong> that
+              app's firmware <em>replaces</em> the dev firmware — but the dev
+              firmware's OTA listener gets bundled into the app, so further
+              updates still work over WiFi.</li>
+        </ul>
+        <p>
+          WiFi credentials are written into the cube's NVS flash (namespace
+          <code>core</code>, keys <code>ssid</code> and <code>pw</code>). They
+          live there even across power cycles and firmware swaps. They never
+          leave your machine.
+        </p>
+      </div>
+    </details>
+
+    <details>
+      <summary>🔌 Cube not showing up over USB? Run a diagnostic</summary>
+      <div class="explainer">
+        <p>
+          The Kublet has a <strong>USB Mini-B</strong> port (the older
+          trapezoid connector — not modern USB-C). If your cube's screen says
+          "open mobile app" or shows the Kublet logo, the cable is delivering
+          power. If it isn't appearing at <code>/dev/cu.*</code> for flashing,
+          the most likely causes are:
+        </p>
+        <ol>
+          <li><strong>Charge-only cable.</strong> A lot of old USB-Mini cables
+              never had the data pins wired. Try a different one — preferably a
+              cable you know syncs an actual device, not just charges it.</li>
+          <li><strong>Missing CP210x driver.</strong> The cube's USB-serial
+              chip is a Silicon Labs CP210x. Without the driver, macOS can
+              power the cube but doesn't expose a serial node. Install from
+              <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">silabs.com</a>
+              (CP210x VCP for macOS), then reboot.</li>
+          <li><strong>USB hub.</strong> Some hubs don't pass through serial
+              devices cleanly. Plug the cube directly into the Mac.</li>
+        </ol>
+        <button type="button" class="ghost" onclick="runDiagnostic()">▶ Run diagnostic now</button>
+        <pre id="diagnostic-output" hidden></pre>
+      </div>
+    </details>
+
+    <form id="flash-form" onsubmit="flashCube(event)">
+      <label>Device name
+        <input name="name" placeholder="kublet1" pattern="[a-zA-Z0-9_-]+" required>
+      </label>
+      <label>Number (#N)
+        <input name="num" type="number" min="1" max="99" placeholder="1" required style="width:6em">
+      </label>
+      <label>WiFi SSID
+        <input name="ssid" placeholder="your-wifi-name" value="{{ saved_wifi.ssid }}" required>
+      </label>
+      <label>WiFi password
+        <input name="pw" type="password"
+               placeholder="{% if saved_wifi.pw_saved %}••• saved — leave blank to reuse{% else %}••••••••{% endif %}"
+               {% if not saved_wifi.pw_saved %}required{% endif %}>
+        {% if saved_wifi.pw_saved %}
+        <span class="hint">Last saved password is on disk at <code>tools/.env</code> — leave blank to reuse it, or type a new one to override.</span>
+        {% endif %}
+      </label>
+      <label>Serial port
+        <select name="port">
+          <option value="">auto-detect</option>
+          {% for p in ports %}
+          <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">⚡ Flash dev firmware over USB</button>
+      <button type="button" class="ghost" onclick="refreshPorts()">↻ refresh ports</button>
+    </form>
+    {% if not ports %}
+    <p class="muted small">
+      No USB-serial ports detected right now. Plug your cube into a
+      <strong>data-capable USB Mini-B cable</strong> (the trapezoid connector on the cube),
+      install the <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">SiLabs CP210x driver</a> if you haven't,
+      then click "refresh ports". Use the diagnostic above if it still doesn't appear.
+    </p>
+    {% endif %}
+  </section>
+  </div>
+
+  <!-- ============================ DEVICES ============================ -->
+  <div class="tab" id="tab-devices">
+  <section class="panel" id="devices">
+    <h2>📡 Registered kublets ({{ devices|length }})</h2>
+    {% if devices %}
+    <table class="devices">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Target</th>
+          <th>Currently running</th>
+          <th>Last deploy</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in devices %}
+        <tr>
+          <td class="num">#{{ d.num }}</td>
+          <td>
+            <span class="status-dot" data-status-for="{{ d.name }}" title="checking…">●</span>
+            {% if d.kind == 'emulator' %}💻{% else %}📡{% endif %}
+            {{ d.name }}
+          </td>
+          <td>
+            {% if d.kind == 'emulator' %}
+              <span class="muted">SDL2 emulator</span>
+              {% if d.running %}<span class="hint">· running</span>{% endif %}
+            {% else %}
+              <code>{{ d.ip }}</code>
+            {% endif %}
+          </td>
+          <td>
+            {% if d.last_app %}
+              <code class="appname">{{ d.last_app }}</code>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td class="muted small">
+            {% if d.last_deployed_at %}
+              <span class="ts" data-ts="{{ d.last_deployed_at }}">just now</span>
+            {% else %}
+              never
+            {% endif %}
+          </td>
+          <td>
+            {% if d.kind == 'emulator' and d.running %}
+              <button class="ghost" onclick="stopEmulator('{{ d.name }}')">stop</button>
+            {% endif %}
+            <button class="ghost" onclick="editDevice('{{ d.name }}', '{{ d.ip }}', {{ d.num }}, '{{ d.kind or 'cube' }}')">edit</button>
+            <button class="ghost" onclick="deleteDevice('{{ d.name }}')">remove</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No devices registered yet — flash one above, add a cube manually, or add a 💻 emulator slot for local debugging.</p>
+    {% endif %}
+
+    <form id="add-device" onsubmit="addDevice(event)">
+      <label>Kind
+        <select name="kind" onchange="onKindChange(this)">
+          <option value="cube">📡 cube (LAN IP)</option>
+          <option value="emulator">💻 emulator (local SDL2)</option>
+        </select>
+      </label>
+      <input name="name" placeholder="name" required>
+      <input name="ip" placeholder="192.168.x.x" required>
+      <input name="num" type="number" min="1" placeholder="#" required style="width:5em">
+      <button type="submit">+ add manually</button>
+    </form>
+    <p class="muted small">
+      💻 <strong>Emulator slot</strong>: deploys run <code>tools/emulate &lt;app&gt;</code>
+      on this machine and stream <em>stdout</em> (including <code>Serial.print*</code>
+      from the Arduino mock) into the deploy job log — useful for debugging an app
+      without flashing a cube. Switch to the 🖥 Simulator tab to watch the screen
+      live. Requires <code>cmake</code> + <code>sdl2</code> from Homebrew (already
+      installed by <code>install.sh</code>). Won't work if the webui itself is
+      running inside Docker.
+    </p>
+  </section>
+  </div>
+
+  <!-- ============================ DEPLOY ============================ -->
+  <div class="tab" id="tab-deploy">
+  <section class="panel" id="deploy">
+    <h2>🚀 Deploy app to a device</h2>
+    <form id="deploy-form" onsubmit="deploy(event)">
+      <label>App
+        <select name="app" required>
+          {% for a in apps %}
+          <option value="{{ a.name }}">{{ a.name }}{% if a.summary %} — {{ a.summary }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Target device
+        <select name="device" required>
+          {% for d in devices %}
+          <option value="{{ d.name }}">
+            {% if d.kind == 'emulator' %}💻{% else %}📡{% endif %}
+            #{{ d.num }} {{ d.name }}
+            ({% if d.kind == 'emulator' %}emulator{% else %}{{ d.ip }}{% endif %})
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label style="margin-top:10px">
+        <input type="checkbox" name="usb" id="deploy-usb" onchange="onDeployUsbChange(this)">
+        🔌 USB fallback (flash via cable instead of WiFi OTA — for cubes with weak signal)
+      </label>
+      <label id="deploy-port-row" hidden>Serial port
+        <select name="port" id="deploy-port-select">
+          <option value="">auto-detect</option>
+          {% for p in ports %}
+          <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">📡 Build + deploy</button>
+    </form>
+  </section>
+
+  <!-- Job output is shown inside the Deploy tab. It stays visible across tab
+       switches by sitting at the bottom of <main> (see below), so you can
+       hop to 🖥 Simulator while an emulator build is still streaming logs. -->
+  </div>
+
+  <!-- ============================ SIMULATOR ============================ -->
+  <div class="tab" id="tab-simulator">
+  <section class="panel" id="simulator">
+    <h2>🖥 Simulator — live view of any running emulator slot</h2>
+    <p class="muted small">
+      Anything deployed to a 💻 emulator device shows up here at ~5 fps, atomically
+      dumped from the SDL2 framebuffer. Use this to watch what an app would draw
+      on a real cube — without a cube. Cubes (📡) don't appear; flash one and
+      look at it.
+    </p>
+
+    <div class="sim-layout">
+      <div>
+        <label>Emulator slot
+          <select id="sim-device-select" onchange="onSimDeviceChange()">
+            <option value="">— pick one —</option>
+            {% for d in devices if d.kind == 'emulator' %}
+            <option value="{{ d.name }}">💻 #{{ d.num }} {{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label style="margin-top:10px">App
+          <select id="sim-app-select">
+            {% for a in apps %}
+            <option value="{{ a.name }}">{{ a.name }}{% if a.summary %} — {{ a.summary }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="button" onclick="simDeploy()" style="margin-top:10px">▶ Deploy to this slot</button>
+        <label style="margin-top:10px">
+          <input type="checkbox" id="sim-scale" onchange="applySimScale()"> 2× scale (480×480)
+        </label>
+        <div class="sim-status" id="sim-status" style="margin-top:14px">
+          select a slot, pick an app, then hit Deploy. The job log streams below.
+        </div>
+      </div>
+      <div>
+        <div class="sim-screen-wrap">
+          <img id="sim-screen" class="sim-screen" alt="emulator framebuffer" src="">
+        </div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <!-- ============================ APPS CATALOG ============================ -->
+  <div class="tab" id="tab-catalog">
+  <section class="panel" id="catalog">
+    <h2>📱 Apps catalog ({{ apps|length }})</h2>
+    <p class="muted">
+      Every app available in <code>kublet-apps/apps/</code>. The community fork
+      contributes most; the precious-metals, crypto, 5-timezones, and Asu-Weather
+      apps are ours. Click any tile to pre-fill the deploy form.
+    </p>
+    <label class="catalog-sort">Sort by
+      <select id="catalog-sort-select" onchange="sortCatalog(this.value)">
+        <option value="recent">last added (newest top)</option>
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
+      </select>
+    </label>
+    <div class="catalog-grid">
+      {% for a in apps %}
+      <article class="app-card" data-name="{{ a.name|lower }}" data-added-at="{{ a.added_at }}" onclick="pickApp('{{ a.name }}')">
+        <div class="app-thumb">
+          {% if a.preview %}
+          <img src="/preview/{{ a.name }}" alt="{{ a.name }} preview" loading="lazy">
+          {% else %}
+          <div class="thumb-placeholder">240×240</div>
+          {% endif %}
+        </div>
+        <div class="app-meta">
+          <h3><code>{{ a.name }}</code></h3>
+          <p>{{ a.summary or 'No description.' }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <p class="muted small">
+      Need a different app? Source for everything in the markusos community
+      fork is at <code>../source_archive/markusos-fork-snapshot/apps/</code>.
+      Copy a directory into <code>kublet-apps/apps/</code> and reload this page.
+    </p>
+  </section>
+  </div>
+
+  <!-- ============================ ABOUT ============================ -->
+  <div class="tab" id="tab-about">
+  <section class="panel" id="about">
+    <h2>ℹ About your Kublet & this fleet</h2>
+    <div class="explainer">
+      <p>
+        The <a href="https://thekublet.com" target="_blank">Kublet cube</a> is a
+        small ESP32-based 240×240 LCD desk display funded on Kickstarter. The
+        company went silent in August 2024: developer portal offline, no responses
+        to issues, no firmware updates. The hardware works fine; we just need our
+        own toolchain to keep it useful.
+      </p>
+      <h4>What this fleet manager does</h4>
+      <ul>
+        <li>Tracks each cube by name, IP, and a personal number (<code>#N</code>)
+            shown in the corner of every app.</li>
+        <li>Builds the firmware for any app in <code>kublet-apps/apps/</code>
+            with that cube's <code>KUBLET_NUM</code> baked in via
+            <code>-DKUBLET_NUM=N</code>, then OTA-pushes it.</li>
+        <li>Handles the one-time USB flash too (Flash Me section above).</li>
+        <li>Runs on port <strong>1666</strong>. Bundled as a Docker image so it
+            can live on a Pi or NAS and you don't need a Mac terminal open.</li>
+      </ul>
+      <h4>What's actually inside the cube</h4>
+      <ul>
+        <li><strong>SoC:</strong> ESP32 (240 MHz, 320 KB RAM, ~1.3 MB flash for app firmware)</li>
+        <li><strong>Display:</strong> ST7789, 240×240, RGB 565 over SPI @ 40 MHz</li>
+        <li><strong>Backlight:</strong> GPIO 15, PWM via ESP32 ledc</li>
+        <li><strong>Button:</strong> GPIO 19, active LOW</li>
+        <li><strong>WiFi:</strong> 2.4 GHz only (ESP32 limitation)</li>
+        <li><strong>Other peripherals:</strong> none documented or wired up.
+            No IMU, no temperature sensor, no microphone — just display + button.</li>
+      </ul>
+      <h4>OTA protocol</h4>
+      <p>
+        Once the dev firmware is on, the cube exposes <code>POST /update</code>
+        on port 80 of its LAN IP. Multipart upload of <code>firmware.bin</code>;
+        no auth, no encryption. If you care about that, put your kublets on a
+        VLAN separate from your other traffic.
+      </p>
+      <h4>Documentation we recovered</h4>
+      <p>
+        The original developer portal (<code>developers.thekublet.com</code>) is
+        offline but <a href="https://web.archive.org/web/2024*/https://developers.thekublet.com/" target="_blank">cached on the Wayback Machine</a>.
+        The most useful pages are mirrored locally at
+        <code>../source_archive/wayback-developers-portal/</code>.
+      </p>
+
+      <h4>Upstream code & credits</h4>
+      <ul>
+        <li>
+          Community firmware fork: <a href="https://github.com/markusos/kublet-apps" target="_blank">github.com/markusos/kublet-apps</a>
+          (Markus Östberg) — the dev firmware, OTA listener, the app catalog,
+          and the SDL2 desktop emulator all come from here. Most of what makes
+          this hardware usable post-shutdown is his work.
+        </li>
+        <li>
+          PlatformIO + ESP32 Arduino core for the build toolchain;
+          <a href="https://github.com/bblanchon/ArduinoJson" target="_blank">ArduinoJson</a>
+          for the parsing layer; <code>stb_image_write</code> (public domain) for
+          the emulator's PNG output.
+        </li>
+        <li>
+          Silver app, fleet webui, in-browser simulator, USB flash wizard, and the
+          packaging glue around all of the above are <strong>Copyright © A.R.K</strong>.
+        </li>
+      </ul>
+    </div>
+
+    <div class="copyright">
+      Copyright © A.R.K · <a href="mailto:schlaptop@protonmail.com">schlaptop@protonmail.com</a>
+      · built on top of the community fork at
+      <a href="https://github.com/markusos/kublet-apps" target="_blank">markusos/kublet-apps</a>.
+    </div>
+  </section>
+  </div>
+
+</main>
+
+<!-- Job output panel — lives outside the tabs so it stays visible while you
+     switch from Deploy to Simulator and watch a build progress in both. -->
+<section id="job-output" class="panel" hidden>
+  <h2>Job output</h2>
+  <h3>Job <code id="job-id"></code> · status <span id="job-status"></span></h3>
+  <pre id="job-log"></pre>
+</section>
+
+<!-- Edit-device modal. Replaces the chained prompt() calls — those get
+     silently suppressed by most browsers' "block dialogs from this page"
+     feature, so the button felt unresponsive. -->
+<dialog id="edit-dialog">
+  <form id="edit-form" onsubmit="submitEditDevice(event)">
+    <h3>Edit device</h3>
+    <label>Name
+      <input id="edit-name" pattern="[A-Za-z0-9_-]+" required>
+    </label>
+    <label>Number (<code>#N</code>)
+      <input id="edit-num" type="number" min="1" required>
+    </label>
+    <label id="edit-ip-row">IP
+      <input id="edit-ip" required>
+    </label>
+    <input type="hidden" id="edit-old-name">
+    <input type="hidden" id="edit-kind">
+    <menu class="dialog-actions">
+      <button type="button" class="ghost" onclick="closeEditDialog()">Cancel</button>
+      <button type="submit">Save</button>
+    </menu>
+  </form>
+</dialog>
+
+<script>
+async function addDevice(ev) {
+  ev.preventDefault();
+  const f = ev.target;
+  const body = {
+    kind: f.kind.value,
+    name: f.name.value,
+    ip: f.ip.value,
+    num: parseInt(f.num.value, 10),
+  };
+  const r = await fetch('/api/devices', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (r.ok) location.reload();
+  else alert((await r.json()).error || 'failed');
+}
+
+function onKindChange(sel) {
+  // emulator slots have no LAN IP — relax the input requirements visually
+  const ip = sel.form.ip;
+  if (sel.value === 'emulator') {
+    ip.value = '';
+    ip.placeholder = 'n/a (emulator)';
+    ip.disabled = true;
+    ip.required = false;
+  } else {
+    ip.disabled = false;
+    ip.required = true;
+    ip.placeholder = '192.168.x.x';
+  }
+}
+
+async function deleteDevice(name) {
+  if (!confirm(`Remove device "${name}"?`)) return;
+  await fetch(`/api/devices/${encodeURIComponent(name)}`, {method: 'DELETE'});
+  location.reload();
+}
+
+// editDevice now uses an in-page <dialog> instead of chained prompt()
+// calls. Browsers commonly suppress prompt() after one "Block dialogs"
+// click and never re-enable it — which made the old edit button look
+// broken. A real modal can't be globally muted.
+function editDevice(oldName, oldIp, oldNum, kind) {
+  document.getElementById('edit-old-name').value = oldName;
+  document.getElementById('edit-name').value    = oldName;
+  document.getElementById('edit-num').value     = oldNum;
+  document.getElementById('edit-ip').value      = oldIp || '';
+  document.getElementById('edit-kind').value    = kind;
+  // Emulator slots have no real LAN IP — hide that row entirely so the
+  // user isn't tempted to set one and the form submission doesn't
+  // include it.
+  document.getElementById('edit-ip-row').hidden = (kind === 'emulator');
+  document.getElementById('edit-ip').required   = (kind !== 'emulator');
+  document.getElementById('edit-dialog').showModal();
+}
+
+function closeEditDialog() {
+  document.getElementById('edit-dialog').close();
+}
+
+async function submitEditDevice(ev) {
+  ev.preventDefault();
+  const oldName = document.getElementById('edit-old-name').value;
+  const kind    = document.getElementById('edit-kind').value;
+  const body = {
+    name: document.getElementById('edit-name').value.trim(),
+    num:  parseInt(document.getElementById('edit-num').value, 10),
+  };
+  if (kind !== 'emulator') {
+    body.ip = document.getElementById('edit-ip').value.trim();
+  }
+  const r = await fetch(`/api/devices/${encodeURIComponent(oldName)}/edit`,
+    {method: 'POST',
+     headers: {'Content-Type': 'application/json'},
+     body: JSON.stringify(body)});
+  if (!r.ok) {
+    let err = 'edit failed';
+    try { err = (await r.json()).error || err; } catch (_) {}
+    alert(err);
+    return;
+  }
+  closeEditDialog();
+  location.reload();
+}
+
+async function stopEmulator(name) {
+  await fetch(`/api/emulator/${encodeURIComponent(name)}/stop`, {method: 'POST'});
+  location.reload();
+}
+
+async function flashCube(ev) {
+  ev.preventDefault();
+  const f = ev.target;
+  // If pw left blank and a saved one exists, send the sentinel so the server
+  // pulls the password from kublet-apps/tools/.env without echoing it in HTML
+  const pw = f.pw.value || '__saved__';
+  const body = {
+    name: f.name.value,
+    ssid: f.ssid.value,
+    pw: pw,
+    port: f.port.value,
+  };
+  const r = await fetch('/api/init', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (!r.ok) { alert((await r.json()).error || 'failed'); return; }
+  const { job_id } = await r.json();
+  showJob(job_id);
+  // After init succeeds, reload so the new device shows up in the table
+  pollJob(job_id, () => {
+    if (confirm('Flash done. Reload to register the new device?')) location.reload();
+  });
+}
+
+async function deploy(ev) {
+  ev.preventDefault();
+  const f = ev.target;
+  const body = {
+    app: f.app.value,
+    device: f.device.value,
+    usb: f.usb && f.usb.checked,
+    port: f.port ? f.port.value : '',
+  };
+  const r = await fetch('/api/deploy', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  if (!r.ok) { alert((await r.json()).error || 'failed'); return; }
+  const { job_id } = await r.json();
+  showJob(job_id);
+  pollJob(job_id);
+}
+
+function onDeployUsbChange(cb) {
+  // Reveal the port dropdown only when USB fallback is requested. The
+  // cube must be cabled to the host (Mini-B → host USB) and visible at
+  // /dev/cu.*; same hardware path as the Flash Me wizard.
+  const row = document.getElementById('deploy-port-row');
+  row.hidden = !cb.checked;
+}
+
+function showJob(id) {
+  const out = document.getElementById('job-output');
+  out.hidden = false;
+  out.scrollIntoView({behavior: 'smooth', block: 'start'});
+  document.getElementById('job-id').textContent = id;
+}
+
+async function pollJob(id, onDone) {
+  const r = await fetch(`/api/jobs/${id}`);
+  const job = await r.json();
+  document.getElementById('job-status').textContent = job.status;
+  document.getElementById('job-log').textContent = job.log;
+  if (job.status === 'running') {
+    setTimeout(() => pollJob(id, onDone), 1000);
+  } else if (onDone) {
+    onDone();
+  }
+}
+
+async function refreshPorts() {
+  const r = await fetch('/api/serial-ports');
+  const ports = await r.json();
+  const sel = document.querySelector('#flash-form select[name="port"]');
+  sel.innerHTML = '<option value="">auto-detect</option>' +
+                  ports.map(p => `<option value="${p}">${p}</option>`).join('');
+  if (ports.length === 0) alert('Still no serial ports — check your cable.');
+}
+
+function pickApp(name) {
+  const sel = document.querySelector('#deploy-form select[name="app"]');
+  if (sel) {
+    sel.value = name;
+    sel.scrollIntoView({behavior: 'smooth', block: 'center'});
+    sel.focus();
+  }
+}
+
+async function runDiagnostic() {
+  const out = document.getElementById('diagnostic-output');
+  out.hidden = false;
+  out.textContent = 'running diagnostic…';
+  const r = await fetch('/api/diagnostics');
+  const d = await r.json();
+  const lines = [];
+  lines.push('USB-serial ports the dev tool would offer:');
+  if (d.serial_ports.length) {
+    d.serial_ports.forEach(p => lines.push('  ' + p));
+  } else {
+    lines.push('  (none)');
+  }
+  lines.push('');
+  lines.push('Everything macOS exposes under /dev/cu.*:');
+  d.system_serial_glob.forEach(p => lines.push('  ' + p));
+  if (!d.system_serial_glob.length) lines.push('  (none — that means even macOS does not see a USB-serial device)');
+  if (d.system_tty_glob && d.system_tty_glob.length) {
+    lines.push('');
+    lines.push('Linux ttyUSB / ttyACM:');
+    d.system_tty_glob.forEach(p => lines.push('  ' + p));
+  }
+  lines.push('');
+  lines.push('macOS system_profiler match (CP210x / CH340 / Kublet / ESP32):');
+  if (Array.isArray(d.macos_usb_match)) {
+    d.macos_usb_match.forEach(line => lines.push('  ' + line));
+  } else {
+    lines.push('  ' + d.macos_usb_match);
+  }
+  lines.push('');
+  if (!d.serial_ports.length) {
+    lines.push('VERDICT: No serial port detected.');
+    lines.push('  → If macOS sees no USB-serial device at all, your cable is charge-only');
+    lines.push('    OR the SiLabs CP210x driver is missing. Install from silabs.com.');
+    lines.push('  → If macOS lists a Silicon Labs CP210x device but no /dev/cu.* appears,');
+    lines.push('    install the CP210x VCP driver and reboot.');
+  } else {
+    lines.push('VERDICT: Port found — go ahead and flash above.');
+  }
+  out.textContent = lines.join('\n');
+}
+
+// Render relative-time labels in the devices table
+function formatRelative(ts) {
+  const diff = (Date.now() / 1000) - ts;
+  if (diff < 60) return Math.round(diff) + 's ago';
+  if (diff < 3600) return Math.round(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+  return Math.round(diff / 86400) + 'd ago';
+}
+document.querySelectorAll('.ts[data-ts]').forEach(el => {
+  el.textContent = formatRelative(parseInt(el.dataset.ts, 10));
+});
+
+// =====================================================================
+// Online/offline indicators on each device row.
+// Cubes are probed via TCP connect to port 80 (the OTA listener bundled
+// into every app firmware). Emulator slots report based on whether their
+// SDL2 process is alive. The first poll fires right after page load,
+// subsequent ones every 20s so changes show up without a refresh.
+// =====================================================================
+async function refreshDeviceStatus() {
+  try {
+    const r = await fetch('/api/devices/status');
+    if (!r.ok) return;
+    const list = await r.json();
+    for (const s of list) {
+      const dot = document.querySelector(`.status-dot[data-status-for="${CSS.escape(s.name)}"]`);
+      if (!dot) continue;
+      dot.classList.remove('online', 'offline');
+      dot.classList.add(s.online ? 'online' : 'offline');
+      dot.title = s.online
+        ? (s.latency_ms != null ? `online · ${s.latency_ms} ms` : 'online')
+        : 'offline';
+    }
+  } catch (_e) { /* network blip — keep last state */ }
+}
+refreshDeviceStatus();
+setInterval(refreshDeviceStatus, 20000);
+
+// =====================================================================
+// Tab switching — show one .tab at a time, sync to URL hash.
+// =====================================================================
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(el => {
+    el.hidden = (el.id !== 'tab-' + name);
+  });
+  document.querySelectorAll('#tabs a').forEach(a => {
+    a.classList.toggle('active', a.dataset.tab === name);
+  });
+  // Update hash without scroll-jumping
+  if (location.hash !== '#' + name) {
+    history.replaceState(null, '', '#' + name);
+  }
+  if (name === 'simulator') startSimPolling();
+  else stopSimPolling();
+}
+
+document.querySelectorAll('#tabs a').forEach(a => {
+  a.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    showTab(a.dataset.tab);
+  });
+});
+
+// Initial tab — from URL hash if it matches a known tab, otherwise Flash me.
+(function initTab() {
+  const wanted = (location.hash || '').replace(/^#/, '');
+  const validTabs = ['flash', 'devices', 'deploy', 'simulator', 'catalog', 'about'];
+  showTab(validTabs.includes(wanted) ? wanted : 'flash');
+})();
+
+// =====================================================================
+// Simulator tab — poll the running emulator's frame.png + status.
+// =====================================================================
+let simTimer = null;
+let simStatusTimer = null;
+let simCurrentDevice = '';
+
+function onSimDeviceChange() {
+  simCurrentDevice = document.getElementById('sim-device-select').value;
+  refreshSimFrame();
+  refreshSimStatus();
+}
+
+function applySimScale() {
+  const img = document.getElementById('sim-screen');
+  img.classList.toggle('scaled', document.getElementById('sim-scale').checked);
+}
+
+function refreshSimFrame() {
+  if (!simCurrentDevice) return;
+  const img = document.getElementById('sim-screen');
+  // Cache-bust with timestamp — frame.png is rewritten every ~200ms by the emu.
+  img.src = `/api/emulator/${encodeURIComponent(simCurrentDevice)}/frame.png?t=` + Date.now();
+}
+
+async function refreshSimStatus() {
+  const out = document.getElementById('sim-status');
+  if (!simCurrentDevice) {
+    out.innerHTML = 'select a slot, then deploy an app to it from the 🚀 Deploy tab.';
+    return;
+  }
+  try {
+    const r = await fetch('/api/emulator/status');
+    const list = await r.json();
+    const me = list.find(d => d.name === simCurrentDevice);
+    if (!me) { out.innerHTML = 'this slot is no longer registered.'; return; }
+    const bits = [];
+    bits.push(me.running
+      ? '<span class="ok">● running</span>'
+      : '<span class="stale">○ not running</span>');
+    if (me.last_app) bits.push('app: <code>' + me.last_app + '</code>');
+    if (me.frame_age_s != null) {
+      const age = me.frame_age_s;
+      const ageLabel = age < 1 ? '<1s' : age.toFixed(1) + 's';
+      const cls = age > 3 ? 'stale' : 'ok';
+      bits.push(`frame age: <span class="${cls}">${ageLabel}</span>`);
+    } else {
+      bits.push('<span class="stale">no frame yet</span>');
+    }
+    out.innerHTML = bits.join(' · ');
+  } catch (e) {
+    out.innerHTML = '<span class="stale">status unavailable</span>';
+  }
+}
+
+function startSimPolling() {
+  // Populate device + frame on first open
+  const sel = document.getElementById('sim-device-select');
+  if (sel.value && sel.value !== simCurrentDevice) onSimDeviceChange();
+  // Frame at 5 fps (200ms) matches the emulator's --frame-interval
+  if (!simTimer) simTimer = setInterval(refreshSimFrame, 250);
+  if (!simStatusTimer) simStatusTimer = setInterval(refreshSimStatus, 2000);
+  refreshSimFrame();
+  refreshSimStatus();
+}
+
+function stopSimPolling() {
+  if (simTimer) { clearInterval(simTimer); simTimer = null; }
+  if (simStatusTimer) { clearInterval(simStatusTimer); simStatusTimer = null; }
+}
+
+// Deploy directly from the Simulator tab, same /api/deploy endpoint as
+// the Deploy tab. Job log lives in the global panel below the tabs, so it
+// stays visible as the framebuffer starts updating above.
+async function simDeploy() {
+  const device = document.getElementById('sim-device-select').value;
+  const appName = document.getElementById('sim-app-select').value;
+  if (!device) { alert('Pick an emulator slot first.'); return; }
+  if (!appName) { alert('Pick an app first.'); return; }
+  const r = await fetch('/api/deploy', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ app: appName, device }),
+  });
+  if (!r.ok) { alert((await r.json()).error || 'failed'); return; }
+  const { job_id } = await r.json();
+  showJob(job_id);
+  pollJob(job_id);
+  // Make sure the polling loop is alive so the new frames show up as soon as
+  // the emulator binary boots and starts dumping them.
+  startSimPolling();
+}
+
+// =====================================================================
+// Apps catalog — client-side sort: last-added (default) / A→Z / Z→A.
+// =====================================================================
+function sortCatalog(mode) {
+  const grid = document.querySelector('.catalog-grid');
+  if (!grid) return;
+  const cards = Array.from(grid.children);
+  const cmp = {
+    recent: (a, b) => parseInt(b.dataset.addedAt || 0) - parseInt(a.dataset.addedAt || 0),
+    az:     (a, b) => (a.dataset.name || '').localeCompare(b.dataset.name || ''),
+    za:     (a, b) => (b.dataset.name || '').localeCompare(a.dataset.name || ''),
+  };
+  cards.sort(cmp[mode] || cmp.recent);
+  cards.forEach(c => grid.appendChild(c));
+}
+</script>
+</body>
+</html>

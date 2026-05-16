@@ -1,0 +1,51 @@
+# =============================================================================
+# Root .gitignore for the Kublet-Asu project.
+# Anything secret, machine-specific, or auto-generated stays out of git.
+# =============================================================================
+
+# ── Secrets — DO NOT COMMIT ──────────────────────────────────────────────────
+# WiFi credentials persisted by `tools/dev init`
+kublet-apps/tools/.env
+# Generated NVS partition files (also contain WiFi creds in raw form)
+kublet-apps/tools/nvs_wifi.bin
+kublet-apps/tools/nvs_wifi.csv
+# Legacy device cache the dev tool keeps locally
+kublet-apps/tools/.devices.yml
+
+# ── Local fleet state ─────────────────────────────────────────────────────────
+# Each user's registered cubes + LAN IPs; the webui re-creates an empty one
+# on first run if missing.
+webui/devices.json
+
+# ── Python venv / caches ──────────────────────────────────────────────────────
+kublet-apps/kublet_env/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ── PlatformIO build artifacts ────────────────────────────────────────────────
+kublet-apps/apps/*/.pio/
+kublet-apps/apps/*/.vscode/
+kublet-apps/apps/*/.vs/
+
+# ── Emulator (CMake) build dir ────────────────────────────────────────────────
+kublet-apps/tools/src/emulate/build/
+
+# ── Runtime artifacts ─────────────────────────────────────────────────────────
+*.log
+*.pid
+/tmp/kublet-emu/
+
+# ── Editor / IDE ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.bak
