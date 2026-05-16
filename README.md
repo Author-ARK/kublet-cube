@@ -43,7 +43,6 @@ It's been fun. Maybe it helps you too.
 ```
 .
 ├── HOWTO.md                ← step-by-step install + first-cube setup
-├── HANDOFF.md              ← state-of-the-world for hand-overs
 ├── install.sh              ← one-shot bootstrap (brew + venv + pio + smoke build)
 ├── kublet.sh               ← start/stop/status/logs wrapper for the webui
 ├── kublet-apps/            ← cloned community fork + our apps under apps/
