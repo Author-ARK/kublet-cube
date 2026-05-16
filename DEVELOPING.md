@@ -1,4 +1,4 @@
-# Developing on Kublet-Asu
+# Developing on Kublet-Cube
 
 Practical workflow guide for anyone hacking on the repo — how to run the
 fleet web-UI, the desktop emulator, push firmware to a cube, and add a
@@ -19,8 +19,8 @@ time" walkthrough see [HOWTO.md](HOWTO.md).
 ## 2. One-shot install
 
 ```bash
-git clone https://github.com/<you>/kublet-asu.git
-cd kublet-asu
+git clone https://github.com/<you>/kublet-cube.git
+cd kublet-cube
 bash install.sh
 ```
 

@@ -1,4 +1,4 @@
-# Kublet-Asu
+# Kublet-Cube
 
 Custom firmware, a Flask fleet web-UI, and a growing app catalog for
 the [Kublet cube](https://thekublet.com) — the small ESP32 desk display
@@ -57,8 +57,8 @@ It's been fun. Maybe it helps you too.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-fork>/kublet-asu.git
-cd kublet-asu
+git clone https://github.com/<your-fork>/kublet-cube.git
+cd kublet-cube
 bash install.sh                # brew, venv, pio toolchain, smoke build
 ./kublet.sh start              # webui on http://localhost:1666
 ```
@@ -165,8 +165,8 @@ If you spot code in this repo descended from a project not listed in
 
 Apache License, Version 2.0. See [LICENSE](LICENSE) and the per-component
 attributions in [NOTICE](NOTICE).
-# kublet-asu
-# kublet-asu
-# kublet-asu
-# kublet-asu
-# kublet-asu
+# kublet-cube
+# kublet-cube
+# kublet-cube
+# kublet-cube
+# kublet-cube
